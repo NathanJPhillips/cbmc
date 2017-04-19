@@ -217,10 +217,17 @@ void class_hierarchyt::get_virtual_callsite_targets(
 Function: class_hierarchyt::get_virtual_call_definition
 
   Inputs:
+    class_id: The class of the reference on which the function is called.
+    component_name: The component name of the function called.
+    ns: The current namespace used to find definitions.
 
  Outputs:
+    A functiont for the function definiton found
 
  Purpose:
+    For a call to a function using a reference to a class of object, find the
+    definition on a parent class that is being used.
+    Used by get_virtual_callsite_targets.
 
 \*******************************************************************/
 
@@ -229,35 +236,34 @@ class_hierarchyt::functiont class_hierarchyt::get_virtual_call_definition(
   const irep_idt &component_name,
   const namespacet &ns) const
 {
-  functiont root_function;
-
   // Start from current class, go to parents until something
   // is found.
   irep_idt c=class_id;
   while(!c.empty())
   {
+    // Look for method on class c
     exprt method=get_method(c, component_name, ns);
     if(method.is_not_nil())
     {
+      // Found a definition
+      functiont root_function;
       root_function.class_id=c;
       root_function.symbol_expr=to_symbol_expr(method);
       root_function.symbol_expr.set(ID_C_class, c);
-      break; // abort
+      return root_function;
     }
 
     const idst &parents=class_map.at(c).parents;
-
     if(parents.empty())
+      // No parents - definition not found
       break;
     c=parents.front();
   }
 
-  if(root_function.class_id.empty())
-  {
-    // No definition here; this is an abstract function.
-    root_function.class_id=class_id;
-  }
-  return root_function;
+  // No definition here; this is an abstract function.
+  functiont function;
+  function.class_id=class_id;
+  return function;
 }
 
 /*******************************************************************\
