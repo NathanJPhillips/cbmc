@@ -210,44 +210,7 @@ bool java_bytecode_languaget::parse(
 
 /*******************************************************************\
 
-Function: get_virtual_method_target
-
-  Inputs: `needed_classes`: set of classes that can be instantiated.
-            Any potential callee not in this set will be ignored.
-          `call_basename`: unqualified function name with type
-            signature (e.g. "f:(I)")
-          `classname`: class name that may define or override a
-            function named `call_basename`.
-          `symbol_table`: global symtab
-
- Outputs: Returns the fully qualified name of `classname`'s definition
-          of `call_basename` if found and `classname` is present in
-          `needed_classes`, or irep_idt() otherwise.
-
- Purpose: Find a virtual callee, if one is defined and the callee type
-          is known to exist.
-
-\*******************************************************************/
-
-static irep_idt get_virtual_method_target(
-  const std::set<irep_idt> &needed_classes,
-  const irep_idt &call_basename,
-  const irep_idt &classname,
-  const symbol_tablet &symbol_table)
-{
-  // Program-wide, is this class ever instantiated?
-  if(!needed_classes.count(classname))
-    return irep_idt();
-  auto methodid=id2string(classname)+"."+id2string(call_basename);
-  if(symbol_table.has_symbol(methodid))
-    return methodid;
-  else
-    return irep_idt();
-}
-
-/*******************************************************************\
-
-Function: get_virtual_method_target
+Function: get_virtual_method_targets
 
   Inputs: `c`: function call whose potential target functions should
             be determined.
@@ -276,59 +239,29 @@ static void get_virtual_method_targets(
   const auto &called_function=c.function();
   assert(called_function.id()==ID_virtual_function);
 
-  const auto &call_class=called_function.get(ID_C_class);
-  assert(call_class!=irep_idt());
-  const auto &call_basename=called_function.get(ID_component_name);
-  assert(call_basename!=irep_idt());
+  class_hierarchyt::functionst targets;
 
-  auto old_size=needed_methods.size();
+  class_hierarchy.get_virtual_callsite_targets(
+    called_function,
+    namespacet(symbol_table),
+    targets);
 
-  auto child_classes=class_hierarchy.get_children_trans(call_class);
-  for(const auto &child_class : child_classes)
+  bool found_target=false;
+  for(const auto &target : targets)
   {
-    auto child_method=
-      get_virtual_method_target(
-        needed_classes,
-        call_basename,
-        child_class,
-        symbol_table);
-    if(child_method!=irep_idt())
-      needed_methods.push_back(child_method);
-  }
-
-  irep_idt parent_class_id=call_class;
-  while(1)
-  {
-    auto parent_method=
-      get_virtual_method_target(
-        needed_classes,
-        call_basename,
-        parent_class_id,
-        symbol_table);
-    if(parent_method!=irep_idt())
+    const auto &target_class=target.symbol_expr.get(ID_C_class);
+    if(needed_classes.count(target_class))
     {
-      needed_methods.push_back(parent_method);
-      break;
-    }
-    else
-    {
-      auto findit=class_hierarchy.class_map.find(parent_class_id);
-      if(findit==class_hierarchy.class_map.end())
-        break;
-      else
-      {
-        const auto &entry=findit->second;
-        if(entry.parents.empty())
-          break;
-        else
-          parent_class_id=entry.parents[0];
-      }
+      needed_methods.push_back(target.symbol_expr.get_identifier());
+      found_target=true;
     }
   }
 
-  if(needed_methods.size()==old_size)
+  if(!found_target)
   {
     // Didn't find any candidate callee. Generate a stub.
+    const irep_idt call_class=called_function.get(ID_C_class);
+    const irep_idt call_basename=called_function.get(ID_component_name);
     std::string stubname=id2string(call_class)+"."+id2string(call_basename);
     symbolt symbol;
     symbol.name=stubname;
