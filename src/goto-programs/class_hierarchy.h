@@ -70,6 +70,11 @@ public:
     const namespacet &,
     functionst &) const;
 
+  functiont get_virtual_call_definition(
+    const irep_idt &real_classid,
+    const irep_idt &function_name,
+    const namespacet &ns) const;
+
   void output(std::ostream &) const;
 
 protected:

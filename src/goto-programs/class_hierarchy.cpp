@@ -192,6 +192,43 @@ void class_hierarchyt::get_virtual_callsite_targets(
   const irep_idt class_id=function.get(ID_C_class);
   const irep_idt component_name=function.get(ID_component_name);
   assert(!class_id.empty());
+
+  functiont root_function=get_virtual_call_definition(
+    class_id,
+    component_name,
+    ns);
+
+  // iterate over all children, transitively
+  std::set<irep_idt> visited;
+  get_child_functions_rec(
+    class_id,
+    root_function.symbol_expr,
+    component_name,
+    ns,
+    functions,
+    visited);
+
+  if(root_function.symbol_expr!=symbol_exprt())
+    functions.push_back(root_function);
+}
+
+/*******************************************************************\
+
+Function: class_hierarchyt::get_virtual_call_definition
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+class_hierarchyt::functiont class_hierarchyt::get_virtual_call_definition(
+  const irep_idt &class_id,
+  const irep_idt &component_name,
+  const namespacet &ns) const
+{
   functiont root_function;
 
   // Start from current class, go to parents until something
@@ -220,19 +257,7 @@ void class_hierarchyt::get_virtual_callsite_targets(
     // No definition here; this is an abstract function.
     root_function.class_id=class_id;
   }
-
-  // iterate over all children, transitively
-  std::set<irep_idt> visited;
-  get_child_functions_rec(
-    class_id,
-    root_function.symbol_expr,
-    component_name,
-    ns,
-    functions,
-    visited);
-
-  if(root_function.symbol_expr!=symbol_exprt())
-    functions.push_back(root_function);
+  return root_function;
 }
 
 /*******************************************************************\
