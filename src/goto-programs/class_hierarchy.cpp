@@ -112,6 +112,158 @@ void class_hierarchyt::get_parents_trans_rec(
 
 /*******************************************************************\
 
+Function: class_hierarchyt::get_child_functions_rec
+
+  Inputs: `this_id`: class name
+          `last_method_defn`: the most-derived parent of `this_id`
+             to define the requested function
+          `component_name`: name of the function searched for
+
+ Outputs: `functions` is assigned a list of {class name, function symbol}
+          pairs indicating that if `this` is of the given class, then the
+          call will target the given function. Thus if A <: B <: C and A
+          and C provide overrides of `f` (but B does not),
+          get_child_functions_rec("C", C.f, "f") -> [{"C", C.f},
+                                                     {"B", C.f},
+                                                     {"A", A.f}]
+
+ Purpose: Used by get_virtual_callsite_targets to track the most-derived parent
+          that provides an override of a given function.
+
+\*******************************************************************/
+
+void class_hierarchyt::get_child_functions_rec(
+  const irep_idt &this_id,
+  const symbol_exprt &last_method_defn,
+  const irep_idt &component_name,
+  const namespacet &ns,
+  functionst &functions,
+  std::set<irep_idt> &visited) const
+{
+  auto findit=class_map.find(this_id);
+  if(findit==class_map.end())
+    return;
+
+  for(const auto &child : findit->second.children)
+  {
+    if(!visited.insert(child).second)
+      continue;
+    exprt method=get_method(child, component_name, ns);
+    functiont function(child);
+    if(method.is_not_nil())
+    {
+      function.symbol_expr=to_symbol_expr(method);
+      function.symbol_expr.set(ID_C_class, child);
+    }
+    else
+    {
+      function.symbol_expr=last_method_defn;
+    }
+    functions.push_back(function);
+
+    get_child_functions_rec(
+      child,
+      function.symbol_expr,
+      component_name,
+      ns,
+      functions,
+      visited);
+  }
+}
+
+/*******************************************************************\
+
+Function: class_hierarchyt::get_virtual_callsite_targets
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+void class_hierarchyt::get_virtual_callsite_targets(
+  const exprt &function,
+  const namespacet &ns,
+  functionst &functions) const
+{
+  assert(function.id()==ID_virtual_function);
+  const irep_idt class_id=function.get(ID_C_class);
+  const irep_idt component_name=function.get(ID_component_name);
+  assert(!class_id.empty());
+  functiont root_function;
+
+  // Start from current class, go to parents until something
+  // is found.
+  irep_idt c=class_id;
+  while(!c.empty())
+  {
+    exprt method=get_method(c, component_name, ns);
+    if(method.is_not_nil())
+    {
+      root_function.class_id=c;
+      root_function.symbol_expr=to_symbol_expr(method);
+      root_function.symbol_expr.set(ID_C_class, c);
+      break; // abort
+    }
+
+    const idst &parents=class_map.at(c).parents;
+
+    if(parents.empty())
+      break;
+    c=parents.front();
+  }
+
+  if(root_function.class_id.empty())
+  {
+    // No definition here; this is an abstract function.
+    root_function.class_id=class_id;
+  }
+
+  // iterate over all children, transitively
+  std::set<irep_idt> visited;
+  get_child_functions_rec(
+    class_id,
+    root_function.symbol_expr,
+    component_name,
+    ns,
+    functions,
+    visited);
+
+  if(root_function.symbol_expr!=symbol_exprt())
+    functions.push_back(root_function);
+}
+
+/*******************************************************************\
+
+Function: class_hierarchyt::get_method
+
+  Inputs:
+
+ Outputs:
+
+ Purpose:
+
+\*******************************************************************/
+
+exprt class_hierarchyt::get_method(
+  const irep_idt &class_id,
+  const irep_idt &component_name,
+  const namespacet &ns) const
+{
+  irep_idt id=id2string(class_id)+"."+
+              id2string(component_name);
+
+  const symbolt *symbol;
+  if(ns.lookup(id, symbol))
+    return nil_exprt();
+
+  return symbol->symbol_expr();
+}
+
+/*******************************************************************\
+
 Function: class_hierarchyt::output
 
   Inputs:

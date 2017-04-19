@@ -12,9 +12,12 @@ Date: April 2016
 #define CPROVER_GOTO_PROGRAMS_CLASS_HIERARCHY_H
 
 #include <iosfwd>
+#include <set>
 #include <map>
 
 #include <util/namespace.h>
+#include <util/std_expr.h>
+
 
 class class_hierarchyt
 {
@@ -48,11 +51,41 @@ public:
     return result;
   }
 
+  class functiont
+  {
+  public:
+    functiont() {}
+    explicit functiont(const irep_idt &_class_id) :
+      class_id(_class_id)
+    {}
+
+    symbol_exprt symbol_expr;
+    irep_idt class_id;
+  };
+
+  typedef std::vector<functiont> functionst;
+
+  void get_virtual_callsite_targets(
+    const exprt &,
+    const namespacet &,
+    functionst &) const;
+
   void output(std::ostream &) const;
 
 protected:
   void get_children_trans_rec(const irep_idt &, idst &) const;
   void get_parents_trans_rec(const irep_idt &, idst &) const;
+  void get_child_functions_rec(
+    const irep_idt &,
+    const symbol_exprt &,
+    const irep_idt &,
+    const namespacet &,
+    functionst &,
+    std::set<irep_idt> &visited) const;
+  exprt get_method(
+    const irep_idt &class_id,
+    const irep_idt &component_name,
+    const namespacet &ns) const;
 };
 
 std::ostream &output_dot(std::ostream &ostr, const class_hierarchyt &hierarchy);

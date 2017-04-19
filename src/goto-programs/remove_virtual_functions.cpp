@@ -41,30 +41,6 @@ protected:
   void remove_virtual_function(
     goto_programt &goto_program,
     goto_programt::targett target);
-
-  class functiont
-  {
-  public:
-    functiont() {}
-    explicit functiont(const irep_idt &_class_id) :
-      class_id(_class_id)
-    {}
-
-    symbol_exprt symbol_expr;
-    irep_idt class_id;
-  };
-
-  typedef std::vector<functiont> functionst;
-  void get_functions(const exprt &, functionst &);
-  void get_child_functions_rec(
-    const irep_idt &,
-    const symbol_exprt &,
-    const irep_idt &,
-    functionst &,
-    std::set<irep_idt> &visited) const;
-  exprt get_method(
-    const irep_idt &class_id,
-    const irep_idt &component_name) const;
 };
 
 /*******************************************************************\
@@ -113,8 +89,8 @@ void remove_virtual_functionst::remove_virtual_function(
   assert(function.id()==ID_virtual_function);
   assert(!code.arguments().empty());
 
-  functionst functions;
-  get_functions(function, functions);
+  class_hierarchyt::functionst functions;
+  class_hierarchy.get_virtual_callsite_targets(function, ns, functions);
 
   if(functions.empty())
   {
@@ -149,7 +125,7 @@ void remove_virtual_functionst::remove_virtual_function(
 
   exprt this_expr=code.arguments()[0];
   // If necessary, cast to the last candidate function to
-  // get the object's clsid. By the structure of get_functions,
+  // get the object's clsid. By the structure of get_virtual_callsite_targets,
   // this is the parent of all other classes under consideration.
   const auto &base_classid=functions.back().class_id;
   const auto &base_function_symbol=functions.back().symbol_expr;
@@ -229,153 +205,6 @@ void remove_virtual_functionst::remove_virtual_function(
 
   // finally, kill original invocation
   target->make_skip();
-}
-
-/*******************************************************************\
-
-Function: remove_virtual_functionst::get_child_functions_rec
-
-  Inputs: `this_id`: class name
-          `last_method_defn`: the most-derived parent of `this_id`
-             to define the requested function
-          `component_name`: name of the function searched for
-
- Outputs: `functions` is assigned a list of {class name, function symbol}
-          pairs indicating that if `this` is of the given class, then the
-          call will target the given function. Thus if A <: B <: C and A
-          and C provide overrides of `f` (but B does not),
-          get_child_functions_rec("C", C.f, "f") -> [{"C", C.f},
-                                                     {"B", C.f},
-                                                     {"A", A.f}]
-
- Purpose: Used by get_functions to track the most-derived parent that
-          provides an override of a given function.
-
-\*******************************************************************/
-
-void remove_virtual_functionst::get_child_functions_rec(
-  const irep_idt &this_id,
-  const symbol_exprt &last_method_defn,
-  const irep_idt &component_name,
-  functionst &functions,
-  std::set<irep_idt> &visited) const
-{
-  auto findit=class_hierarchy.class_map.find(this_id);
-  if(findit==class_hierarchy.class_map.end())
-    return;
-
-  for(const auto &child : findit->second.children)
-  {
-    if(!visited.insert(child).second)
-      continue;
-    exprt method=get_method(child, component_name);
-    functiont function(child);
-    if(method.is_not_nil())
-    {
-      function.symbol_expr=to_symbol_expr(method);
-      function.symbol_expr.set(ID_C_class, child);
-    }
-    else
-    {
-      function.symbol_expr=last_method_defn;
-    }
-    functions.push_back(function);
-
-    get_child_functions_rec(
-      child,
-      function.symbol_expr,
-      component_name,
-      functions,
-      visited);
-  }
-}
-
-/*******************************************************************\
-
-Function: remove_virtual_functionst::get_functions
-
-  Inputs:
-
- Outputs:
-
- Purpose:
-
-\*******************************************************************/
-
-void remove_virtual_functionst::get_functions(
-  const exprt &function,
-  functionst &functions)
-{
-  const irep_idt class_id=function.get(ID_C_class);
-  const irep_idt component_name=function.get(ID_component_name);
-  assert(!class_id.empty());
-  functiont root_function;
-
-  // Start from current class, go to parents until something
-  // is found.
-  irep_idt c=class_id;
-  while(!c.empty())
-  {
-    exprt method=get_method(c, component_name);
-    if(method.is_not_nil())
-    {
-      root_function.class_id=c;
-      root_function.symbol_expr=to_symbol_expr(method);
-      root_function.symbol_expr.set(ID_C_class, c);
-      break; // abort
-    }
-
-    const class_hierarchyt::idst &parents=
-      class_hierarchy.class_map[c].parents;
-
-    if(parents.empty())
-      break;
-    c=parents.front();
-  }
-
-  if(root_function.class_id.empty())
-  {
-    // No definition here; this is an abstract function.
-    root_function.class_id=class_id;
-  }
-
-  // iterate over all children, transitively
-  std::set<irep_idt> visited;
-  get_child_functions_rec(
-    class_id,
-    root_function.symbol_expr,
-    component_name,
-    functions,
-    visited);
-
-  if(root_function.symbol_expr!=symbol_exprt())
-    functions.push_back(root_function);
-}
-
-/*******************************************************************\
-
-Function: remove_virtual_functionst::get_method
-
-  Inputs:
-
- Outputs:
-
- Purpose:
-
-\*******************************************************************/
-
-exprt remove_virtual_functionst::get_method(
-  const irep_idt &class_id,
-  const irep_idt &component_name) const
-{
-  irep_idt id=id2string(class_id)+"."+
-              id2string(component_name);
-
-  const symbolt *symbol;
-  if(ns.lookup(id, symbol))
-    return nil_exprt();
-
-  return symbol->symbol_expr();
 }
 
 /*******************************************************************\
