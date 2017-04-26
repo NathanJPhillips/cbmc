@@ -287,8 +287,7 @@ void remove_complex(symbol_tablet &symbol_table)
 }
 
 /// removes complex data type
-static void remove_complex(
-  goto_functionst::goto_functiont &goto_function)
+void remove_complex(goto_functionst::goto_functiont &goto_function)
 {
   remove_complex(goto_function.type);
 

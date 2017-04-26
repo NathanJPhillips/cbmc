@@ -16,6 +16,11 @@ Date:   September 2014
 
 #include <goto-programs/goto_model.h>
 
+
+void remove_complex(symbol_tablet &symbol_table);
+
+void remove_complex(goto_functionst::goto_functiont &goto_function);
+
 void remove_complex(symbol_tablet &, goto_functionst &);
 
 void remove_complex(goto_modelt &);

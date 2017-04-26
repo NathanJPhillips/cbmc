@@ -16,6 +16,10 @@ Date:   September 2014
 
 #include <goto-programs/goto_model.h>
 
+void remove_vector(symbol_tablet &symbol_table);
+
+void remove_vector(goto_functionst::goto_functiont &goto_function);
+
 void remove_vector(symbol_tablet &, goto_functionst &);
 
 void remove_vector(goto_modelt &);

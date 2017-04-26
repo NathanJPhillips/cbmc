@@ -22,4 +22,12 @@ void remove_instanceof(
 
 void remove_instanceof(goto_modelt &model);
 
+void remove_instanceof(
+  goto_programt &function_body,
+  symbol_tablet &symbol_table);
+
+void remove_instanceof(
+  goto_programt &function_body,
+  goto_modelt &goto_model);
+
 #endif

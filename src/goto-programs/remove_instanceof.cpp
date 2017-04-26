@@ -22,25 +22,22 @@ class remove_instanceoft
 {
 public:
   remove_instanceoft(
-    symbol_tablet &_symbol_table,
-    goto_functionst &_goto_functions):
-    symbol_table(_symbol_table),
-    ns(_symbol_table),
-    goto_functions(_goto_functions)
+      symbol_tablet &symbol_table)
+    : symbol_table(symbol_table),
+      ns(symbol_table)
   {
-    class_hierarchy(_symbol_table);
+    class_hierarchy(symbol_table);
   }
 
-  // Lower instanceof for all functions:
-  void lower_instanceof();
+  // Lower instanceof for all functions
+  void lower_instanceof(goto_functionst &goto_functions);
+  // Lower instanceof for a single functions
+  bool lower_instanceof(goto_programt &);
 
 protected:
   symbol_tablet &symbol_table;
   namespacet ns;
   class_hierarchyt class_hierarchy;
-  goto_functionst &goto_functions;
-
-  bool lower_instanceof(goto_programt &);
 
   typedef std::vector<
     std::pair<goto_programt::targett, goto_programt::targett>> instanceof_instt;
@@ -198,9 +195,10 @@ bool remove_instanceoft::lower_instanceof(goto_programt &goto_program)
 }
 
 /// See function above
-/// \return Side-effects on this->goto_functions, replacing every instanceof in
-///   every function with an explicit test.
-void remove_instanceoft::lower_instanceof()
+/// \param goto_functions: The functions to work on
+/// \return Side-effects on goto_functions, replacing every instanceof in every
+///   function with an explicit test.
+void remove_instanceoft::lower_instanceof(goto_functionst &goto_functions)
 {
   bool changed=false;
   for(auto &f : goto_functions.function_map)
@@ -219,12 +217,26 @@ void remove_instanceof(
   symbol_tablet &symbol_table,
   goto_functionst &goto_functions)
 {
-  remove_instanceoft rem(symbol_table, goto_functions);
-  rem.lower_instanceof();
+  remove_instanceoft rem(symbol_table);
+  rem.lower_instanceof(goto_functions);
 }
 
 void remove_instanceof(goto_modelt &goto_model)
 {
-  remove_instanceof(
-    goto_model.symbol_table, goto_model.goto_functions);
+  remove_instanceof(goto_model.symbol_table, goto_model.goto_functions);
+}
+
+void remove_instanceof(
+  goto_programt &function_body,
+  symbol_tablet &symbol_table)
+{
+  remove_instanceoft rem(symbol_table);
+  rem.lower_instanceof(function_body);
+}
+
+void remove_instanceof(
+  goto_programt &function_body,
+  goto_modelt &goto_model)
+{
+  remove_instanceof(function_body, goto_model.symbol_table);
 }
