@@ -24,6 +24,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #include "goto_convert_functions.h"
 #include "read_goto_binary.h"
 
+
 bool initialize_goto_model(
   goto_modelt &goto_model,
   const cmdlinet &cmdline,
@@ -54,9 +55,7 @@ bool initialize_goto_model(
 
     if(!sources.empty())
     {
-      language_filest language_files;
-
-      language_files.set_message_handler(message_handler);
+      goto_model.language_files.set_message_handler(message_handler);
 
       for(const auto &filename : sources)
       {
@@ -74,7 +73,7 @@ bool initialize_goto_model(
         }
 
         std::pair<language_filest::file_mapt::iterator, bool>
-          result=language_files.file_map.insert(
+          result=goto_model.language_files.file_map.insert(
             std::pair<std::string, language_filet>(filename, language_filet()));
 
         language_filet &lf=result.first->second;
@@ -108,7 +107,7 @@ bool initialize_goto_model(
 
       msg.status() << "Converting" << messaget::eom;
 
-      if(language_files.typecheck(goto_model.symbol_table))
+      if(goto_model.language_files.typecheck(goto_model.symbol_table))
       {
         msg.error() << "CONVERSION ERROR" << messaget::eom;
         return true;
@@ -116,7 +115,7 @@ bool initialize_goto_model(
 
       if(binaries.empty())
       {
-        if(language_files.final(
+        if(goto_model.language_files.final(
           goto_model.symbol_table,
           generate_start_function))
         {
@@ -137,12 +136,19 @@ bool initialize_goto_model(
     if(!binaries.empty())
       config.set_from_symbol_table(goto_model.symbol_table);
 
-    msg.status() << "Generating GOTO Program" << messaget::eom;
+    if(!cmdline.isset("lazy-loading"))
+    {
+        msg.status() << "Generating GOTO Program" << messaget::eom;
 
-    goto_convert(
-      goto_model.symbol_table,
-      goto_model.goto_functions,
-      message_handler);
+        goto_convert(
+        goto_model.symbol_table,
+        goto_model.goto_functions,
+        message_handler);
+      // As lazy goto functions are not required, language files is done with:
+      goto_model.language_files.clear();
+    }
+    // Otherwise language_files remains around to provide method conversion
+    // on demand.
   }
   catch(const char *e)
   {

@@ -13,6 +13,7 @@ Author: Daniel Kroening, kroening@kroening.com
 #define CPROVER_GOTO_PROGRAMS_GOTO_MODEL_H
 
 #include <util/symbol_table.h>
+#include <util/language_file.h>
 
 #include "goto_functions.h"
 
@@ -22,6 +23,7 @@ Author: Daniel Kroening, kroening@kroening.com
 class goto_modelt
 {
 public:
+  language_filest language_files;
   symbol_tablet symbol_table;
   goto_functionst goto_functions;
 
