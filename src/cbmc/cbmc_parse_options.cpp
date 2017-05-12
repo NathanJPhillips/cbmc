@@ -451,10 +451,9 @@ int cbmc_parse_optionst::doit()
     return 0; // should contemplate EX_OK from sysexits.h
   }
 
-  goto_functionst goto_functions;
-
   expr_listt bmc_constraints;
 
+  eager_goto_functionst goto_functions;
   int get_goto_program_ret=
     get_goto_program(options, bmc_constraints, goto_functions);
 

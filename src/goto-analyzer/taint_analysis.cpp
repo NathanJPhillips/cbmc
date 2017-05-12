@@ -285,7 +285,7 @@ bool taint_analysist::operator()(
         }
 
       goto_functionst::goto_functiont &entry=
-        goto_functions.function_map[goto_functionst::entry_point()];
+        goto_functions.function_map.at(goto_functionst::entry_point());
 
       goto_programt &body=entry.body;
 

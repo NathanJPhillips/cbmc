@@ -15,6 +15,8 @@ Date: June 2003
 #define CPROVER_GOTO_PROGRAMS_GOTO_FUNCTIONS_TEMPLATE_H
 
 #include "goto_function_template.h"
+#include "goto_functions_map.h"
+
 #include <ostream>
 #include <cassert>
 
@@ -22,16 +24,20 @@ Date: June 2003
 #include <util/symbol.h>
 #include <util/cprover_prefix.h>
 
+template<typename bodyt>
+class goto_functions_map_lazyt;
+
 
 template <class bodyT>
 class goto_functions_templatet
 {
 public:
   typedef goto_function_templatet<bodyT> goto_functiont;
-  typedef std::map<irep_idt, goto_functiont> function_mapt;
-  function_mapt function_map;
+  typedef goto_functions_map_baset<bodyT> function_mapt;
+  function_mapt &function_map;
 
-  goto_functions_templatet()
+  explicit goto_functions_templatet(function_mapt &function_map):
+    function_map(function_map)
   {
   }
 
@@ -39,7 +45,7 @@ public:
   goto_functions_templatet &operator=(const goto_functions_templatet &)=delete;
 
   goto_functions_templatet(goto_functions_templatet &&other):
-    function_map(std::move(other.function_map))
+    function_map(other.function_map)
   {
   }
 
@@ -47,6 +53,12 @@ public:
   {
     function_map=std::move(other.function_map);
     return *this;
+  }
+
+  bool is_lazy_load_supported() const
+  {
+    return dynamic_cast<goto_functions_map_lazyt<bodyT> *>(&function_map)
+      != nullptr;
   }
 
   void clear()
@@ -113,42 +125,29 @@ template <class bodyT>
 void goto_functions_templatet<bodyT>::compute_location_numbers()
 {
   unsigned nr=0;
-
-  for(typename function_mapt::iterator
-      it=function_map.begin();
-      it!=function_map.end();
-      it++)
-    it->second.body.compute_location_numbers(nr);
+  for(auto &named_function : function_map)
+    named_function.second.body.compute_location_numbers(nr);
 }
 
 template <class bodyT>
 void goto_functions_templatet<bodyT>::compute_incoming_edges()
 {
-  for(typename function_mapt::iterator
-      it=function_map.begin();
-      it!=function_map.end();
-      it++)
-    it->second.body.compute_incoming_edges();
+  for(auto &named_function : function_map)
+    named_function.second.body.compute_incoming_edges();
 }
 
 template <class bodyT>
 void goto_functions_templatet<bodyT>::compute_target_numbers()
 {
-  for(typename function_mapt::iterator
-      it=function_map.begin();
-      it!=function_map.end();
-      it++)
-    it->second.body.compute_target_numbers();
+  for(auto &named_function : function_map)
+    named_function.second.body.compute_target_numbers();
 }
 
 template <class bodyT>
 void goto_functions_templatet<bodyT>::compute_loop_numbers()
 {
-  for(typename function_mapt::iterator
-      it=function_map.begin();
-      it!=function_map.end();
-      it++)
-    it->second.body.compute_loop_numbers();
+  for(auto &named_function : function_map)
+    named_function.second.body.compute_loop_numbers();
 }
 
 #endif // CPROVER_GOTO_PROGRAMS_GOTO_FUNCTIONS_TEMPLATE_H

@@ -204,7 +204,7 @@ protected:
     goto_programt &dest);
 
   // goto functions that were already inlined transitively
-  typedef goto_functionst::function_mapt cachet;
+  typedef goto_functions_mapt<goto_programt> cachet;
   cachet cache;
 
   typedef std::unordered_set<irep_idt, irep_id_hash> finished_sett;

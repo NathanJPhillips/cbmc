@@ -769,8 +769,7 @@ const goto_inlinet::goto_functiont &goto_inlinet::goto_inline_transitive(
 {
   assert(goto_function.body_available());
 
-  cachet::const_iterator c_it=cache.find(identifier);
-
+  cachet::iterator c_it=cache.find(identifier);
   if(c_it!=cache.end())
   {
     const goto_functiont &cached=c_it->second;

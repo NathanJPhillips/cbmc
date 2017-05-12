@@ -59,7 +59,7 @@ public:
 
 protected:
   ui_message_handlert ui_message_handler;
-  goto_modelt goto_model;
+  eager_goto_modelt goto_model;
 
   virtual void register_languages();
 

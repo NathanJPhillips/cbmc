@@ -267,7 +267,7 @@ int goto_diff_parse_optionst::doit()
     return 6;
   }
 
-  goto_modelt goto_model1, goto_model2;
+  eager_goto_modelt goto_model1, goto_model2;
 
   int get_goto_program_ret=
     get_goto_program(options, *this, goto_model1);

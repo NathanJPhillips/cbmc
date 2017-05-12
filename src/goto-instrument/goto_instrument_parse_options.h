@@ -115,7 +115,7 @@ protected:
   bool partial_inlining_done;
   bool remove_returns_done;
 
-  goto_functionst goto_functions;
+  eager_goto_functionst goto_functions;
 };
 
 #endif // CPROVER_GOTO_INSTRUMENT_GOTO_INSTRUMENT_PARSE_OPTIONS_H

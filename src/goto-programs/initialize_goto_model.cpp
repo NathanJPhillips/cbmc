@@ -136,7 +136,7 @@ bool initialize_goto_model(
     if(!binaries.empty())
       config.set_from_symbol_table(goto_model.symbol_table);
 
-    if(!cmdline.isset("lazy-loading"))
+    if(!goto_model.goto_functions.is_lazy_load_supported())
     {
         msg.status() << "Generating GOTO Program" << messaget::eom;
 

@@ -123,7 +123,7 @@ public:
     const goto_programt &goto_program,
     const namespacet &ns)
   {
-    goto_functionst goto_functions;
+    eager_goto_functionst goto_functions;
     initialize(goto_program);
     entry_state(goto_program);
     fixedpoint(goto_program, goto_functions, ns);
@@ -150,7 +150,7 @@ public:
     const goto_functionst::goto_functiont &goto_function,
     const namespacet &ns)
   {
-    goto_functionst goto_functions;
+    eager_goto_functionst goto_functions;
     initialize(goto_function);
     entry_state(goto_function.body);
     fixedpoint(goto_function.body, goto_functions, ns);

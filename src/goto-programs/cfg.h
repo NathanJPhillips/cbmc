@@ -147,7 +147,7 @@ public:
 
   void operator()(P &goto_program)
   {
-    goto_functionst goto_functions;
+    eager_goto_functionst goto_functions;
     compute_edges(goto_functions, goto_program);
   }
 

@@ -73,7 +73,7 @@ public:
 
 protected:
   goto_symex_statet symex_state;
-  goto_functionst functions;
+  eager_goto_functionst functions;
   symbol_tablet &symbol_table;
   const namespacet ns;
   symex_target_equationt equation;

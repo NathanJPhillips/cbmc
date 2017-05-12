@@ -66,7 +66,7 @@ void flow_insensitive_analysis_baset::operator()(
   const goto_programt &goto_program)
 {
   initialize(goto_program);
-  goto_functionst goto_functions;
+  eager_goto_functionst goto_functions;
   fixedpoint(goto_program, goto_functions);
 }
 

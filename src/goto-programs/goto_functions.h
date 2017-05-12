@@ -20,7 +20,10 @@ Date: June 2003
 class goto_functionst:public goto_functions_templatet<goto_programt>
 {
 public:
-  goto_functionst()=default;
+  explicit goto_functionst(function_mapt &function_map)
+    : goto_functions_templatet<goto_programt>(function_map)
+  {
+  }
 
   // Copying is unavailable as base class copy is deleted
   // MSVC is unable to automatically determine this
@@ -42,6 +45,17 @@ public:
   {
     goto_functions_templatet::operator=(std::move(other));
     return *this;
+  }
+};
+
+class eager_goto_functionst:public goto_functionst
+{
+private:
+  goto_functions_mapt<goto_programt> concrete_function_map;
+
+public:
+  eager_goto_functionst() : goto_functionst(concrete_function_map)
+  {
   }
 };
 

@@ -25,7 +25,7 @@ class goto_modelt
 public:
   language_filest language_files;
   symbol_tablet symbol_table;
-  goto_functionst goto_functions;
+  goto_functionst &goto_functions;
 
   void clear()
   {
@@ -39,11 +39,12 @@ public:
     goto_functions.output(ns, out);
   }
 
-  goto_modelt()
+  explicit goto_modelt(goto_functionst &goto_functions):
+    goto_functions(goto_functions)
   {
   }
 
-  // Copying is normally too expensive
+  // Can't share goto_functionst with another model
   goto_modelt(const goto_modelt &)=delete;
   goto_modelt &operator=(const goto_modelt &)=delete;
 
@@ -55,7 +56,7 @@ public:
 
   goto_modelt(goto_modelt &&other):
     symbol_table(std::move(other.symbol_table)),
-    goto_functions(std::move(other.goto_functions))
+    goto_functions(other.goto_functions)
   {
   }
 
@@ -64,6 +65,52 @@ public:
     symbol_table=std::move(other.symbol_table);
     goto_functions=std::move(other.goto_functions);
     return *this;
+  }
+};
+
+class eager_goto_modelt:public goto_modelt
+{
+private:
+  eager_goto_functionst concrete_goto_functions;
+
+public:
+  eager_goto_modelt():goto_modelt(concrete_goto_functions)
+  {
+  }
+};
+
+#include "goto_functions_map_lazy.h"
+
+class lazy_goto_modelt:public goto_modelt
+{
+private:
+  goto_functions_map_lazyt<goto_programt> function_map;
+  goto_functionst goto_functions;
+
+public:
+  lazy_goto_modelt(
+      const std::function<void(
+          goto_modelt &goto_model,
+          const irep_idt &function_name,
+          goto_functionst::goto_functiont &function)>
+        &post_process_function,
+      const std::function<void(
+          goto_modelt &goto_model,
+          goto_functionst &goto_functions)>
+        &post_process_functions,
+      message_handlert &message_handler)
+    : goto_modelt(goto_functions),
+      function_map(
+        *this,
+        [this, post_process_function] (
+          const irep_idt &function_name,
+          goto_functionst::goto_functiont &function)
+        { return post_process_function(*this, function_name, function); },
+        [this, post_process_functions] (goto_functionst &goto_functions)
+        { return post_process_functions(*this, goto_functions); },
+        message_handler),
+      goto_functions(function_map)
+  {
   }
 };
 

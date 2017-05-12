@@ -24,7 +24,7 @@ class compilet:public language_uit
 {
 public:
   namespacet ns;
-  goto_functionst compiled_functions;
+  eager_goto_functionst compiled_functions;
   bool echo_file_name;
   std::string working_directory;
   std::string override_language;

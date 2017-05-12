@@ -18,17 +18,14 @@ void remove_unused_functions(
   message_handlert &message_handler)
 {
   std::set<irep_idt> used_functions;
-  std::list<goto_functionst::function_mapt::iterator> unused_functions;
+  std::list<irep_idt> unused_functions;
   find_used_functions(
     goto_functionst::entry_point(), functions, used_functions);
 
-  for(goto_functionst::function_mapt::iterator it=
-        functions.function_map.begin();
-      it!=functions.function_map.end();
-      it++)
+  for(irep_idt fn_name : functions.function_map.keys())
   {
-    if(used_functions.find(it->first)==used_functions.end())
-      unused_functions.push_back(it);
+    if(used_functions.count(fn_name)==0)
+      unused_functions.push_back(fn_name);
   }
 
   messaget message(message_handler);
