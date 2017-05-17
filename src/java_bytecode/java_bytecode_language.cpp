@@ -528,7 +528,7 @@ bool java_bytecode_languaget::do_ci_lazy_method_conversion(
           needed_classes,
           symbol_table);
         java_bytecode_convert_method(
-          *parsed_method.first,
+          symbol_table.lookup(parsed_method.first),
           *parsed_method.second,
           symbol_table,
           get_message_handler(),
@@ -618,7 +618,7 @@ void java_bytecode_languaget::convert_lazy_method(
 {
   const auto &lazy_method_entry=lazy_methods.at(id);
   java_bytecode_convert_method(
-    *lazy_method_entry.first,
+    symtab.lookup(lazy_method_entry.first),
     *lazy_method_entry.second,
     symtab,
     get_message_handler(),
