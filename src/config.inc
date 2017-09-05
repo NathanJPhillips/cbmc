@@ -10,7 +10,7 @@ endif
 
 # Select optimisation or debug info
 #CXXFLAGS += -O2 -DNDEBUG
-#CXXFLAGS += -O0 -g
+CXXFLAGS += -O0 -ggdb3
 
 ifeq ($(shell uname),Linux)
   CXXFLAGS += -DUSE_BOOST

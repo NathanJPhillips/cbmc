@@ -138,9 +138,9 @@ bool initialize_goto_model(
 
     if(!goto_model.goto_functions.is_lazy_load_supported())
     {
-        msg.status() << "Generating GOTO Program" << messaget::eom;
+      msg.status() << "Generating GOTO Program" << messaget::eom;
 
-        goto_convert(
+      goto_convert(
         goto_model.symbol_table,
         goto_model.goto_functions,
         message_handler);

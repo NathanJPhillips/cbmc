@@ -101,6 +101,7 @@ public:
     const irep_idt &id,
     symbol_tablet &symbol_table)
   {
+    PRECONDITION(has_lazy_method(id));
     return lazy_method_map.at(id)->convert_lazy_method(id, symbol_table);
   }
 
