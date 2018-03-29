@@ -49,6 +49,10 @@ public:
   void operator()(
     const java_class_loadert::parse_tree_with_overlayst &parse_trees);
 
+  static java_class_loadert::parse_tree_with_overlayst get_used_parse_trees(
+    const java_class_loadert::parse_tree_with_overlayst &parse_trees,
+    message_handlert &message_handler);
+
   typedef java_bytecode_parse_treet::classt classt;
   typedef java_bytecode_parse_treet::fieldt fieldt;
   typedef java_bytecode_parse_treet::methodt methodt;
@@ -164,7 +168,71 @@ static optionalt<std::string> extract_generic_interface_reference(
   return {};
 }
 
-/// Converts a class parse tree into a class symbol and adds it to the
+/// Check through all the class parse trees and skip unloaded ones and
+/// overlays that appear before the base class or non-overlays that appear
+/// after the base class.
+/// \param parse_trees: The parse trees found for the class to be converted.
+/// \param message_handler: Used for logging
+/// \remarks
+///   Allows multiple definitions of the same class to appear on the
+///   classpath, so long as all but the first definition are marked with the
+///   attribute `\@java::com.diffblue.OverlayClassImplementation`.
+///   Overlay class definitions can contain methods with the same signature
+///   as methods in the original class, so long as these are marked with the
+///   attribute `\@java::com.diffblue.OverlayMethodImplementation`; such
+///   overlay methods are replaced in the original file with the version
+///   found in the last overlay on the classpath. Later definitions can
+///   also contain new supporting methods and fields that are merged in.
+///   This will allow insertion of Java methods into library classes to
+///   handle, for example, modelling dependency injection.
+java_class_loadert::parse_tree_with_overlayst
+java_bytecode_convert_classt::get_used_parse_trees(
+  const java_class_loadert::parse_tree_with_overlayst &parse_trees,
+  message_handlert &message_handler)
+{
+  messaget msg(message_handler);
+
+  java_class_loadert::parse_tree_with_overlayst used_parse_trees;
+  auto parse_tree_it = parse_trees.begin();
+  // If the first class implementation is an overlay emit a warning and
+  // skip over it until we find a non-overlay class
+  for( ; parse_tree_it != parse_trees.end(); ++parse_tree_it)
+  {
+    // Skip parse trees that failed to load
+    if(!parse_tree_it->loading_successful)
+      continue;
+    const classt &parsed_class = parse_tree_it->parsed_class;
+    if(!is_overlay_class(parsed_class))
+      break;
+    msg.warning()
+      << "Skipping class " << parsed_class.name
+      << " marked with OverlayClassImplementation but found before original"
+        " definition"
+      << eom;
+  }
+  if(parse_tree_it != parse_trees.end())
+  {
+    used_parse_trees.push_front(std::cref(*parse_tree_it));
+    ++parse_tree_it;
+  }
+  // Collect overlay classes
+  for( ; parse_tree_it != parse_trees.end(); ++parse_tree_it)
+  {
+    const classt &overlay_class = parse_tree_it->parsed_class;
+    // Ignore non-initial classes that aren't overlays
+    if(!is_overlay_class(overlay_class))
+    {
+      msg.warning()
+        << "Skipping duplicate definition of class " << overlay_class.name
+        << " not marked with OverlayClassImplementation" << eom;
+      continue;
+    }
+    used_parse_trees.push_front(std::cref(*parse_tree_it));
+  }
+  return used_parse_trees;
+}
+
+/// Converts all the class parse trees into a class symbol and adds it to the
 /// symbol table.
 /// \param parse_trees: The parse trees found for the class to be converted.
 /// \remarks
@@ -184,8 +252,7 @@ void java_bytecode_convert_classt::operator()(
 {
   PRECONDITION(!parse_trees.empty());
   const irep_idt &class_name = parse_trees.front().parsed_class.name;
-
-  if(symbol_table.has_symbol("java::" + id2string(class_name)))
+  if(symbol_table.has_symbol("java::"+id2string(class_name)))
   {
     debug() << "Skip class " << class_name << " (already loaded)" << eom;
     return;
@@ -194,51 +261,20 @@ void java_bytecode_convert_classt::operator()(
   // Add array types to the symbol table
   add_array_types(symbol_table);
 
-  // Ignore all parse trees that failed to load
-  std::list<std::reference_wrapper<const classt>> loaded_parse_trees;
-  for(const java_bytecode_parse_treet &parse_tree : parse_trees)
+  java_class_loadert::parse_tree_with_overlayst parse_tree_with_overlays =
+    get_used_parse_trees(parse_trees, get_message_handler());
+
+  bool loading_success = !parse_tree_with_overlays.empty();
+  if(loading_success)
   {
-    if(parse_tree.loading_successful)
-      loaded_parse_trees.push_back(std::cref(parse_tree.parsed_class));
-  }
-  auto parse_tree_it = loaded_parse_trees.begin();
-  // If the first class implementation is an overlay emit a warning and
-  // skip over it until we find a non-overlay class
-  while(parse_tree_it != loaded_parse_trees.end())
-  {
-    const classt &parsed_class = *parse_tree_it;
-    if(!is_overlay_class(parsed_class))
-      break;
-    warning()
-      << "Skipping class " << parsed_class.name
-      << " marked with OverlayClassImplementation but found before original"
-        " definition"
-      << eom;
-    ++parse_tree_it;
-  }
-  bool loading_success = false;
-  if(parse_tree_it != loaded_parse_trees.end())
-  {
-    // Collect overlay classes
     overlay_classest overlay_classes;
-    for(auto overlay_class_it = std::next(parse_tree_it);
-        overlay_class_it != loaded_parse_trees.end();
+    for(auto overlay_class_it = std::next(parse_tree_with_overlays.begin());
+        overlay_class_it != parse_tree_with_overlays.end();
         ++overlay_class_it)
     {
-      const classt &overlay_class = *overlay_class_it;
-      // Ignore non-initial classes that aren't overlays
-      if(!is_overlay_class(overlay_class))
-      {
-        warning()
-          << "Skipping duplicate definition of class " << class_name
-          << " not marked with OverlayClassImplementation" << eom;
-        continue;
-      }
-      overlay_classes.push_front(std::cref(overlay_class));
+      overlay_classes.push_front(std::cref(overlay_class_it->parsed_class));
     }
-    const classt &parsed_class = *parse_tree_it;
-    convert(parsed_class, overlay_classes);
-    loading_success = true;
+    convert(parse_tree_with_overlays.begin()->parsed_class, overlay_classes);
   }
 
   // Add as string type if relevant
@@ -1115,4 +1151,12 @@ void mark_java_implicitly_generic_class_type(
         base.type(), implicit_generic_type_parameters);
     }
   }
+}
+
+java_class_loadert::parse_tree_with_overlayst get_used_parse_trees(
+  const java_class_loadert::parse_tree_with_overlayst &parse_trees,
+  message_handlert &message_handler)
+{
+  return java_bytecode_convert_classt::get_used_parse_trees(
+    parse_trees, message_handler);
 }

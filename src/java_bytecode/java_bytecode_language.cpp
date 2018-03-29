@@ -636,8 +636,11 @@ bool java_bytecode_languaget::typecheck(
   // see an int-typed getfield instruction referring to it, add that field now.
   for(auto &class_to_trees : java_class_loader.get_class_with_overlays_map())
   {
-    for(const java_bytecode_parse_treet &parse_tree : class_to_trees.second)
+    for(const java_bytecode_parse_treet &parse_tree
+      : get_used_parse_trees(class_to_trees.second, get_message_handler()))
+    {
       infer_opaque_type_fields(parse_tree, symbol_table);
+    }
   }
 
   // Create global variables for constants (String and Class literals) up front.
@@ -672,7 +675,8 @@ bool java_bytecode_languaget::typecheck(
       journalling_symbol_tablet::wrap(symbol_table);
     for(auto &class_to_trees : java_class_loader.get_class_with_overlays_map())
     {
-      for(const java_bytecode_parse_treet &parse_tree : class_to_trees.second)
+      for(const java_bytecode_parse_treet &parse_tree
+        : get_used_parse_trees(class_to_trees.second, get_message_handler()))
       {
         create_stub_global_symbols(
           parse_tree, symbol_table_journal, class_hierarchy, *this);

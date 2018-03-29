@@ -45,4 +45,8 @@ public:
   }
 };
 
+java_class_loadert::parse_tree_with_overlayst get_used_parse_trees(
+  const java_class_loadert::parse_tree_with_overlayst &parse_trees,
+  message_handlert &message_handler);
+
 #endif // CPROVER_JAVA_BYTECODE_JAVA_BYTECODE_CONVERT_CLASS_H
