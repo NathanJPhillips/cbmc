@@ -101,12 +101,6 @@ void java_add_components_to_class(
   symbolt &class_symbol,
   const struct_union_typet::componentst &components_to_add);
 
-size_t find_closing_delimiter(
-  const std::string &src,
-  size_t position,
-  char open_char,
-  char close_char);
-
 exprt make_function_application(
   const irep_idt &function_name,
   const exprt::operandst &arguments,

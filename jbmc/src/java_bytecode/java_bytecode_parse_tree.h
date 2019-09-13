@@ -19,6 +19,7 @@ Author: Daniel Kroening, kroening@kroening.com
 
 #include "bytecode_info.h"
 #include "java_type_signature_parser.h"
+#include "java_types.h"
 
 struct java_bytecode_parse_treet
 {
@@ -266,10 +267,10 @@ struct java_bytecode_parse_treet
       lambda_method_handle_mapt;
     lambda_method_handle_mapt lambda_method_handle_map;
 
+    java_generic_class_typet::generic_typest generic_types;
     typedef std::list<irep_idt> implementst;
     implementst implements;
-    optionalt<std::string> signature;
-    optionalt<java_class_type_signaturet> parsed_sig;
+    java_class_type_signaturet parsed_sig;
     typedef std::list<fieldt> fieldst;
     typedef std::list<methodt> methodst;
     fieldst fields;

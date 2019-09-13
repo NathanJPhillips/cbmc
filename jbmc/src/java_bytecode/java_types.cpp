@@ -504,39 +504,6 @@ build_class_name(const std::string &src, const std::string &class_name_prefix)
   return java_reference_type(struct_tag_type);
 }
 
-/// Finds the closing semi-colon ending a ClassTypeSignature that starts at
-/// \p starting_point.
-/// \param src: The input string to work on.
-/// \param starting_point: The string position where the opening 'L' we want to
-///   find the closing ';' for.
-/// \return The string position corresponding to the matching ';'. For example:
-///   LA;, we would return 2. For LA<TT;>; we would return 7.
-///   See unit/java_bytecode/java_util_tests.cpp for more examples.
-size_t find_closing_semi_colon_for_reference_type(
-  const std::string src,
-  size_t starting_point)
-{
-  PRECONDITION(src[starting_point] == 'L');
-  size_t next_semi_colon = src.find(';', starting_point);
-  INVARIANT(
-    next_semi_colon != std::string::npos,
-    "There must be a semi-colon somewhere in the input");
-  size_t next_angle_bracket = src.find('<', starting_point);
-
-  while(next_angle_bracket < next_semi_colon)
-  {
-    size_t end_bracket =
-      find_closing_delimiter(src, next_angle_bracket, '<', '>');
-    INVARIANT(
-      end_bracket != std::string::npos, "Must find matching angle bracket");
-
-    next_semi_colon = src.find(';', end_bracket + 1);
-    next_angle_bracket = src.find('<', end_bracket + 1);
-  }
-
-  return next_semi_colon;
-}
-
 java_reference_typet java_reference_array_type(const struct_tag_typet &subtype)
 {
   java_reference_typet result = java_array_type('a');
@@ -729,64 +696,6 @@ char java_char_from_type(const typet &type)
     return 'z';
 
   return 'a';
-}
-
-/// Converts the content of a generic class type into a vector of Java types,
-/// that is each type variable of the class has one entry in the returned
-/// vector.
-/// This also supports parsing of bounds in the form of `<T:CBound>` for classes
-/// or `<T::IBound>` for interfaces.
-///
-/// For example for `HashMap<K, V>` a vector with two elements would be returned
-///
-/// \return vector of java types representing the generic type variables
-std::vector<typet> java_generic_type_from_string(
-  const std::string &class_name,
-  const std::string &src)
-{
-  /// the class signature is of the form <TX:Bound_X;:BoundZ;TY:Bound_Y;> or of
-  /// the form <TX::Bound_X;:BoundZ;TY:Bound_Y;> if Bound_X is an interface
-  size_t signature_end = find_closing_delimiter(src, 0, '<', '>');
-  INVARIANT(
-    src[0]=='<' && signature_end!=std::string::npos,
-    "Class signature has unexpected format");
-  std::string signature(src.substr(1, signature_end-1));
-
-  if(signature.find(";:")!=std::string::npos)
-    throw unsupported_java_class_signature_exceptiont("multiple bounds");
-
-  PRECONDITION(signature[signature.size()-1]==';');
-
-  std::vector<typet> types;
-  size_t var_sep=signature.find(';');
-  while(var_sep!=std::string::npos)
-  {
-    size_t bound_sep=signature.find(':');
-    INVARIANT(bound_sep!=std::string::npos, "No bound for type variable.");
-
-    // is bound an interface?
-    // in this case the separator is '::'
-    if(signature[bound_sep + 1] == ':')
-    {
-      INVARIANT(
-        signature[bound_sep + 2] != ':', "Unknown bound for type variable.");
-      bound_sep++;
-    }
-
-    std::string type_var_name(
-      "java::"+class_name+"::"+signature.substr(0, bound_sep));
-    std::string bound_type(signature.substr(bound_sep+1, var_sep-bound_sep));
-
-    java_generic_parametert type_var_type(
-      type_var_name,
-      to_struct_tag_type(
-        java_type_from_string(bound_type, class_name)->subtype()));
-
-    types.push_back(type_var_type);
-    signature=signature.substr(var_sep+1, std::string::npos);
-    var_sep=signature.find(';');
-  }
-  return types;
 }
 
 // java/lang/Object -> java.lang.Object

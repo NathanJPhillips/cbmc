@@ -176,44 +176,6 @@ private:
   std::unordered_set<std::string> no_load_classes;
 };
 
-/// Auxiliary function to extract the generic superclass reference from the
-/// class signature. If the signature is empty or the superclass is not generic
-/// it returns empty.
-/// Example:
-/// - class: A<T> extends B<T, Integer> implements C, D<T>
-/// - signature: <T:Ljava/lang/Object;>B<TT;Ljava/lang/Integer;>;LC;LD<TT;>;
-/// - returned superclass reference: B<TT;Ljava/lang/Integer;>;
-/// \param signature: Signature of the class
-/// \return Reference of the generic superclass, or empty if the superclass
-///   is not generic
-static optionalt<std::string>
-extract_generic_superclass_reference(const optionalt<std::string> &signature)
-{
-  if(signature.has_value())
-  {
-    // skip the (potential) list of generic parameters at the beginning of the
-    // signature
-    const size_t start =
-      signature.value().front() == '<'
-        ? find_closing_delimiter(signature.value(), 0, '<', '>') + 1
-        : 0;
-
-    // extract the superclass reference
-    const size_t end =
-      find_closing_semi_colon_for_reference_type(signature.value(), start);
-    const std::string superclass_ref =
-      signature.value().substr(start, (end - start) + 1);
-
-    // if the superclass is generic then the reference is of form
-    // `Lsuperclass-name<generic-types;>;` if it is implicitly generic, then the
-    // reference is of the form
-    // `Lsuperclass-name<Tgeneric-types;>.Innerclass-Name`
-    if(superclass_ref.find('<') != std::string::npos)
-      return superclass_ref;
-  }
-  return {};
-}
-
 /// Auxiliary function to extract the generic interface reference of an
 /// interface with the specified name from the class signature. If the
 /// signature is empty or the interface is not generic it returns empty.
@@ -226,7 +188,7 @@ extract_generic_superclass_reference(const optionalt<std::string> &signature)
 /// \param interface_name: The interface name
 /// \return Reference of the generic interface, or empty if the interface
 ///   is not generic
-static optionalt<std::string> extract_generic_interface_reference(
+static optionalt<std::string> extract_generic_interface_reference2(
   const optionalt<std::string> &signature,
   const std::string &interface_name)
 {
@@ -278,36 +240,9 @@ void java_bytecode_convert_classt::convert(
     return;
   }
 
-  java_class_typet class_type;
-  if(c.signature.has_value() && c.signature.value()[0]=='<')
-  {
-    java_generic_class_typet generic_class_type;
-#ifdef DEBUG
-    std::cout << "INFO: found generic class signature "
-              << c.signature.value()
-              << " in parsed class "
-              << c.name << "\n";
-#endif
-    try
-    {
-      const std::vector<typet> &generic_types=java_generic_type_from_string(
-        id2string(c.name),
-        c.signature.value());
-      for(const typet &t : generic_types)
-      {
-        generic_class_type.generic_types()
-          .push_back(to_java_generic_parameter(t));
-      }
-      class_type=generic_class_type;
-    }
-    catch(const unsupported_java_class_signature_exceptiont &e)
-    {
-      warning() << "Class: " << c.name
-                << "\n could not parse signature: " << c.signature.value()
-                << "\n " << e.what() << "\n ignoring that the class is generic"
-                << eom;
-    }
-  }
+  java_generic_class_typet class_type;
+  for(const java_generic_parametert &param : c.generic_types)
+    class_type.generic_types().push_back(param);
 
   class_type.set_tag(c.name);
   class_type.set_inner_name(c.inner_name);

@@ -623,15 +623,9 @@ optionalt<typet> java_type_from_string(
   const std::string &,
   const std::string &class_name_prefix = "");
 char java_char_from_type(const typet &type);
-std::vector<typet> java_generic_type_from_string(
-  const std::string &,
-  const std::string &);
 
 typet java_bytecode_promotion(const typet &);
 exprt java_bytecode_promotion(const exprt &);
-size_t find_closing_semi_colon_for_reference_type(
-  const std::string src,
-  size_t starting_point = 0);
 
 std::vector<std::string> parse_raw_list_types(
   std::string src,

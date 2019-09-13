@@ -816,21 +816,17 @@ void java_bytecode_parsert::rClassFile(
     if(java_bytecode.signature_index == 0)
     {
       // Signature not provided for non-generic types, fake-up a signature
-      signature =
-        "L" +
-          id2string(
-            pool_entry(pool_entry(java_bytecode.super_class_index).ref1).s) +
-          ";";
-      for(u2 implements_index : java_bytecode.implements_indices)
-        signature +=
-          "L" + id2string(pool_entry(pool_entry(implements_index).ref1).s) +
-            ";";
+    signature =
+      "L" +
+      id2string(
+        pool_entry(pool_entry(java_bytecode.super_class_index).ref1).s) +
+      ";";
+    for(u2 implements_index : java_bytecode.implements_indices)
+      signature +=
+        "L" + id2string(pool_entry(pool_entry(implements_index).ref1).s) + ";";
     }
     else
-    {
-      parsed_class.signature = signature =
-        id2string(pool_entry(java_bytecode.signature_index).s);
-    }
+      signature = id2string(pool_entry(java_bytecode.signature_index).s);
     try
     {
       parsed_class.parsed_sig =
@@ -859,6 +855,12 @@ void java_bytecode_parsert::rClassFile(
     (java_bytecode.super_class_index == 0) ==
       (parsed_class.name == "java.lang.Object"),
     "Object (and only Object) must not have a superclass");
+
+  for(std::shared_ptr<java_generic_type_parametert> param
+    : parsed_class.parsed_sig.explicit_type_parameters)
+  {
+    parsed_class.generic_types.push_back(to_java_generic_parameter(param->get_type("java::" + id2string(parsed_class.name))));
+  }
 
   if(java_bytecode.super_class_index != 0)
   {
